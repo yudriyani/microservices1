@@ -1,3 +1,4 @@
+name: psdku
 services:
   product-service:
     build:
