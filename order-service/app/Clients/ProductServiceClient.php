@@ -2,39 +2,36 @@
 
 namespace App\Clients;
 
+use App\Exceptions\ServiceUnavailableException;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
-use Illuminate\Http\Client\ConnectionException;
 
 class ProductServiceClient
 {
     // Mengambil detail produk berdasarkan ID.
     public function getProduct(int $productId): array
     {
-        // Mengambil URL Product Service dari konfigurasi.
+        // Mengambil alamat Product Service dari konfigurasi.
         $url = rtrim(config('services.product.url'), '/');
 
         try {
-            // Meminta data produk dengan batas waktu 5 detik.
+            // Meminta detail produk dengan timeout maksimal 5 detik.
             $response = Http::timeout(5)
                 ->get($url . '/products/' . $productId);
         } catch (ConnectionException $e) {
-            // Menangani jika Product Service tidak bisa dihubungi.
-            throw new RuntimeException(
-                'Product Service tidak dapat dihubungi.',
-                0,
-                $e
-            );
+            // Menandai kegagalan koneksi sebagai error layanan.
+            throw new ServiceUnavailableException('Product Service', $e);
         }
 
-        // Menangani jika produk tidak ditemukan.
+        // Produk yang tidak ditemukan merupakan kesalahan bisnis.
         if ($response->status() === 404) {
             throw new RuntimeException('Produk tidak ditemukan.');
         }
 
-        // Menangani respons gagal dari Product Service.
+        // Respons HTTP gagal lainnya dianggap sebagai kegagalan layanan.
         if (!$response->successful()) {
-            throw new RuntimeException('Product Service gagal merespons.');
+            throw new ServiceUnavailableException('Product Service');
         }
 
         // Mengembalikan data produk dari respons API.

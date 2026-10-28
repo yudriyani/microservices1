@@ -1,0 +1,101 @@
+<?php
+
+namespace App\Services;
+
+use App\Clients\CartServiceClient;
+use App\Clients\ProductServiceClient;
+use App\Exceptions\CheckoutConflictException;
+use App\Exceptions\ServiceUnavailableException;
+use App\Models\Order;
+use Illuminate\Support\Facades\DB;
+
+class OrderService
+{
+    // Menyiapkan client untuk mengakses layanan lain.
+    public function __construct(
+        private ProductServiceClient $productClient,
+        private CartServiceClient $cartClient,
+    ) {
+    }
+
+    // Mengambil keranjang dan memastikan keranjang tidak kosong.
+    public function getCartForCheckout(int $userId): array
+    {
+        $cart = $this->cartClient->getCart($userId);
+
+        // Menolak checkout jika keranjang tidak memiliki item.
+        if (empty($cart['items'])) {
+            throw new CheckoutConflictException('Keranjang belanja kosong.');
+        }
+
+        return $cart;
+    }
+
+    
+    // Memeriksa keberadaan produk dan kecukupan stok setiap item.
+    public function validateCartProducts(array $cart): array
+    {
+        $validatedItems = [];
+
+        foreach ($cart['items'] as $item) {
+            // Mengambil detail produk terbaru dari Product Service.
+            $product = $this->productClient->getProduct(
+                (int) $item['product_id']
+            );
+
+            $quantity = (int) $item['quantity'];
+            $stock = (int) ($product['stock'] ?? 0);
+
+            // Menolak checkout jika stok tidak mencukupi.
+           if ($quantity > $stock) {
+                 throw new CheckoutConflictException(
+                     "Stok produk ID {$item['product_id']} tidak mencukupi."
+             );
+            }
+
+            // Menyimpan data yang diperlukan untuk membuat detail pesanan.
+            $validatedItems[] = [
+                'product_id' => (int) $item['product_id'],
+                'product_name' => $product['name'],
+                'price' => (float) $product['price'],
+                'quantity' => $quantity,
+            ];
+        }
+
+        return $validatedItems;
+    }
+
+    
+    // Menyimpan pesanan dan seluruh detail produk dalam satu transaksi.
+    public function createOrder(int $userId, array $items): Order
+    {
+        return DB::transaction(function () use ($userId, $items) {
+            // Menghitung total harga seluruh produk yang dipesan.
+            $totalAmount = collect($items)->sum(
+                fn (array $item) => $item['price'] * $item['quantity']
+            );
+
+            // Membuat pesanan dengan status awal PENDING.
+            $order = Order::create([
+                'user_id' => $userId,
+                'total_amount' => $totalAmount,
+                'status' => 'PENDING',
+            ]);
+
+            // Menyimpan detail beserta snapshot nama dan harga produk.
+            foreach ($items as $item) {
+                $order->items()->create([
+                    'product_id' => $item['product_id'],
+                    'product_name' => $item['product_name'],
+                    'price' => $item['price'],
+                    'quantity' => $item['quantity'],
+                    'subtotal' => $item['price'] * $item['quantity'],
+                ]);
+            }
+
+            // Mengembalikan pesanan beserta detail yang tersimpan.
+            return $order->load('items');
+        });
+    }
+
+}
