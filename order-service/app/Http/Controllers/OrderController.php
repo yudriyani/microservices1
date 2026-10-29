@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exceptions\CheckoutConflictException;
 use App\Exceptions\ServiceUnavailableException;
 use App\Http\Requests\StoreOrderRequest;
+use App\Models\Order;
 use App\Services\OrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -40,18 +41,20 @@ class OrderController extends Controller
             );
 
             try {
-                // Meminta OrderService mengosongkan keranjang pengguna.
+                // Mengosongkan keranjang setelah pesanan berhasil dibuat.
                 $this->orderService->clearCartAfterCheckout(
                     (int) $data['user_id']
                 );
-
             } catch (Throwable $e) {
-                // Mencatat kegagalan tanpa membatalkan pesanan yang tersimpan.
-                Log::warning('Pesanan tersimpan, tetapi keranjang gagal dikosongkan', [
-                    'user_id' => (int) $data['user_id'],
-                    'order_id' => $order->id,
-                    'error' => $e->getMessage(),
-                ]);
+                // Kegagalan mengosongkan keranjang tidak membatalkan pesanan.
+                Log::warning(
+                    'Pesanan tersimpan, tetapi keranjang gagal dikosongkan',
+                    [
+                        'user_id' => (int) $data['user_id'],
+                        'order_id' => $order->id,
+                        'error' => $e->getMessage(),
+                    ]
+                );
             }
 
             return response()->json([
@@ -69,7 +72,9 @@ class OrderController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            $body = ['message' => 'Layanan sementara tidak tersedia.'];
+            $body = [
+                'message' => 'Layanan sementara tidak tersedia.',
+            ];
 
             // Detail teknis hanya ditampilkan saat debug aktif.
             if (config('app.debug')) {
@@ -85,7 +90,9 @@ class OrderController extends Controller
                 'line' => $e->getLine(),
             ]);
 
-            $body = ['message' => 'Terjadi kesalahan saat membuat pesanan.'];
+            $body = [
+                'message' => 'Terjadi kesalahan saat membuat pesanan.',
+            ];
 
             // Detail teknis hanya ditampilkan saat debug aktif.
             if (config('app.debug')) {
@@ -95,9 +102,21 @@ class OrderController extends Controller
             return response()->json($body, 500);
         }
     }
-    // Meminta Cart Service mengosongkan keranjang setelah checkout.
-    public function clearCartAfterCheckout(int $userId): void
+
+    // Mengambil satu pesanan beserta detail itemnya.
+    public function show(int $id): JsonResponse
     {
-        $this->cartClient->clearCart($userId);
+        $order = $this->orderService->getOrderById($id);
+
+        // Mengembalikan 404 jika pesanan tidak ditemukan.
+        if ($order === null) {
+            return response()->json([
+                'message' => 'Pesanan tidak ditemukan.',
+            ], 404);
+        }
+
+        return response()->json([
+            'data' => $order,
+        ], 200);
     }
 }

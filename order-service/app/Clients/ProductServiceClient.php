@@ -3,9 +3,10 @@
 namespace App\Clients;
 
 use App\Exceptions\ServiceUnavailableException;
+use App\Exceptions\CheckoutConflictException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
-use RuntimeException;
+
 
 class ProductServiceClient
 {
@@ -26,7 +27,7 @@ class ProductServiceClient
 
         // Produk yang tidak ditemukan merupakan kesalahan bisnis.
         if ($response->status() === 404) {
-            throw new RuntimeException('Produk tidak ditemukan.');
+           throw new CheckoutConflictException('Produk tidak ditemukan.');
         }
 
         // Respons HTTP gagal lainnya dianggap sebagai kegagalan layanan.

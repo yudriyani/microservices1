@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Clients\CartServiceClient;
 use App\Clients\ProductServiceClient;
 use App\Exceptions\CheckoutConflictException;
-use App\Exceptions\ServiceUnavailableException;
 use App\Models\Order;
 use Illuminate\Support\Facades\DB;
 
@@ -25,13 +24,14 @@ class OrderService
 
         // Menolak checkout jika keranjang tidak memiliki item.
         if (empty($cart['items'])) {
-            throw new CheckoutConflictException('Keranjang belanja kosong.');
+            throw new CheckoutConflictException(
+                'Keranjang belanja kosong.'
+            );
         }
 
         return $cart;
     }
 
-    
     // Memeriksa keberadaan produk dan kecukupan stok setiap item.
     public function validateCartProducts(array $cart): array
     {
@@ -47,13 +47,13 @@ class OrderService
             $stock = (int) ($product['stock'] ?? 0);
 
             // Menolak checkout jika stok tidak mencukupi.
-           if ($quantity > $stock) {
-                 throw new CheckoutConflictException(
-                     "Stok produk ID {$item['product_id']} tidak mencukupi."
-             );
+            if ($quantity > $stock) {
+                throw new CheckoutConflictException(
+                    "Stok produk ID {$item['product_id']} tidak mencukupi."
+                );
             }
 
-            // Menyimpan data yang diperlukan untuk membuat detail pesanan.
+            // Menyimpan data untuk membuat detail pesanan.
             $validatedItems[] = [
                 'product_id' => (int) $item['product_id'],
                 'product_name' => $product['name'],
@@ -65,12 +65,11 @@ class OrderService
         return $validatedItems;
     }
 
-    
-    // Menyimpan pesanan dan seluruh detail produk dalam satu transaksi.
+    // Menyimpan pesanan dan seluruh detail dalam satu transaksi.
     public function createOrder(int $userId, array $items): Order
     {
         return DB::transaction(function () use ($userId, $items) {
-            // Menghitung total harga seluruh produk yang dipesan.
+            // Menghitung total harga seluruh produk.
             $totalAmount = collect($items)->sum(
                 fn (array $item) => $item['price'] * $item['quantity']
             );
@@ -97,5 +96,16 @@ class OrderService
             return $order->load('items');
         });
     }
+    
+    // Mengambil pesanan berdasarkan ID beserta detail itemnya.
+    public function getOrderById(int $orderId): ?Order
+    {
+        return Order::with('items')->find($orderId);
+    }
 
+    // Mengosongkan keranjang setelah pesanan berhasil dibuat.
+    public function clearCartAfterCheckout(int $userId): void
+    {
+        $this->cartClient->clearCart($userId);
+    }
 }
