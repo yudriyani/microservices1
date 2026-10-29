@@ -119,4 +119,25 @@ class OrderController extends Controller
             'data' => $order,
         ], 200);
     }
+
+    // Mengambil daftar pesanan milik pengguna.
+    public function indexByUser(
+        \Illuminate\Http\Request $request,
+        int $userId
+    ): JsonResponse {
+        // Memvalidasi filter status jika diberikan.
+        $validated = $request->validate([
+            'status' => ['sometimes', 'string', 'in:PENDING,PAID'],
+        ]);
+
+        $orders = $this->orderService->getOrdersByUserId(
+            $userId,
+            $validated['status'] ?? null
+        );
+
+        return response()->json([
+            'data' => $orders,
+        ], 200);
+    }
+
 }

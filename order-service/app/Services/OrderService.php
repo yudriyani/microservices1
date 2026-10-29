@@ -108,4 +108,23 @@ class OrderService
     {
         $this->cartClient->clearCart($userId);
     }
+
+    // Mengambil daftar pesanan milik pengguna.
+    public function getOrdersByUserId(
+        int $userId,
+        ?string $status = null
+    ): \Illuminate\Database\Eloquent\Collection {
+        $query = Order::with('items')
+            ->where('user_id', $userId);
+
+        // Memfilter pesanan jika status diberikan.
+        if ($status !== null) {
+            $query->where('status', $status);
+        }
+
+        return $query->latest()->get();
+    }
+
+
+
 }

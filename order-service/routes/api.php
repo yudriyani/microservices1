@@ -1,3 +1,4 @@
+
 <?php
 
 use App\Http\Controllers\OrderController;
@@ -14,6 +15,14 @@ Route::get('/health', function () {
 // Membuat pesanan melalui proses checkout.
 Route::post('/orders', [OrderController::class, 'store']);
 
+// Mengambil daftar pesanan milik pengguna.
+Route::get('/orders/user/{userId}', [
+    OrderController::class,
+    'indexByUser',
+])->whereNumber('userId');
+
 // Mengambil detail pesanan berdasarkan ID.
-Route::get('/orders/{id}', [OrderController::class, 'show'])
-    ->whereNumber('id');
+Route::get('/orders/{id}', [
+    OrderController::class,
+    'show',
+])->whereNumber('id');
