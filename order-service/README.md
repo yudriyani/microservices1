@@ -1,58 +1,196 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Order Service – Microservices
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## 1. Deskripsi
 
-## About Laravel
+Order Service merupakan layanan yang bertanggung jawab untuk mengelola pesanan pengguna dalam sistem berbasis Microservices.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Layanan ini menggunakan Laravel dan MySQL. Order Service berkomunikasi dengan Cart Service untuk mengambil keranjang belanja dan Product Service untuk memperoleh informasi produk.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 2. Teknologi
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- PHP dan Laravel
+- MySQL 8
+- Docker dan Docker Compose
+- REST API
+- Eloquent ORM
 
-## Learning Laravel
+## 3. Arsitektur
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Order Service berkomunikasi dengan dua layanan eksternal:
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- **Cart Service:** mengambil dan menghapus isi keranjang setelah checkout berhasil.
+- **Product Service:** mengambil informasi produk, harga, dan stok untuk validasi pesanan.
+- **Order Database:** menyimpan data pesanan dan detail item secara terpisah.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+Order Service memiliki database sendiri dan tidak mengakses database layanan lain secara langsung.
 
-## Agentic Development
+## 4. Konfigurasi dan Menjalankan Layanan
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+Order Service dijalankan melalui Docker Compose dari direktori utama repository.
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+docker compose up --build -d
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Alamat layanan:
 
-## Contributing
+- Order Service: `http://localhost:3003`
+- Product Service: `http://localhost:3000`
+- Cart Service: `http://localhost:3001`
+- Review Service: `http://localhost:3002`
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Untuk memeriksa container:
 
-## Code of Conduct
+```bash
+docker compose ps
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Untuk melihat log Order Service:
 
-## Security Vulnerabilities
+```bash
+docker compose logs order-service
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## 5. Database
 
-## License
+Order Service menggunakan database MySQL tersendiri dengan dua tabel utama:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### orders
+
+Menyimpan informasi pesanan:
+
+- id
+- user_id
+- total_amount
+- status
+- created_at
+- updated_at
+
+### order_items
+
+Menyimpan detail produk dalam pesanan:
+
+- id
+- order_id
+- product_id
+- product_name
+- price
+- quantity
+- subtotal
+- created_at
+- updated_at
+
+Nama dan harga produk disimpan sebagai snapshot agar informasi pesanan tetap konsisten meskipun data produk berubah.
+
+## 6. Daftar Endpoint
+
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| GET | `/api/health` | Memeriksa kesehatan layanan |
+| POST | `/api/orders` | Membuat pesanan |
+| GET | `/api/orders/{id}` | Melihat detail pesanan |
+| GET | `/api/orders/user/{userId}` | Melihat pesanan pengguna |
+| PATCH | `/api/orders/{id}/pay` | Mengubah status pembayaran |
+
+## 7. Contoh Penggunaan API
+
+### Memeriksa layanan
+
+```http
+GET http://localhost:3003/api/health
+```
+
+### Membuat pesanan
+
+```http
+POST http://localhost:3003/api/orders
+Content-Type: application/json
+Accept: application/json
+```
+
+Body:
+
+```json
+{
+  "user_id": 1
+}
+```
+
+Order Service akan mengambil keranjang pengguna, memvalidasi produk dan stok, menyimpan pesanan, kemudian mencoba mengosongkan keranjang.
+
+### Melihat detail pesanan
+
+```http
+GET http://localhost:3003/api/orders/1
+```
+
+### Melihat pesanan pengguna
+
+```http
+GET http://localhost:3003/api/orders/user/1
+```
+
+Filter berdasarkan status:
+
+```http
+GET http://localhost:3003/api/orders/user/1?status=PENDING
+```
+
+Status yang didukung: `PENDING` dan `PAID`.
+
+### Simulasi pembayaran
+
+```http
+PATCH http://localhost:3003/api/orders/1/pay
+```
+
+Pembayaran hanya disimulasikan dengan mengubah status pesanan dari `PENDING` menjadi `PAID`.
+
+## 8. Penanganan Status HTTP
+
+| HTTP | Keterangan |
+|---|---|
+| 200 | Request berhasil |
+| 201 | Pesanan berhasil dibuat |
+| 404 | Pesanan atau resource tidak ditemukan |
+| 409 | Konflik, seperti keranjang kosong atau stok tidak mencukupi |
+| 422 | Validasi request gagal |
+| 503 | Product Service atau Cart Service tidak tersedia |
+| 500 | Terjadi kesalahan internal |
+
+## 9. Aturan Proses Checkout
+
+1. Pengguna mengirimkan `user_id`.
+2. Order Service mengambil data keranjang dari Cart Service.
+3. Order Service memeriksa apakah keranjang berisi item.
+4. Order Service mengambil informasi setiap produk dari Product Service.
+5. Sistem memvalidasi keberadaan produk dan kecukupan stok.
+6. Pesanan dan detail item disimpan dalam satu transaksi database.
+7. Setelah pesanan berhasil disimpan, Order Service mencoba mengosongkan keranjang.
+8. Jika pengosongan keranjang gagal, pesanan yang sudah tersimpan tidak dibatalkan dan kegagalan dicatat dalam log.
+
+Stok produk hanya diperiksa dan tidak dikurangi.
+
+## 10. Batasan Sistem
+
+- Tidak menggunakan autentikasi.
+- Tidak menggunakan pembayaran sungguhan.
+- Tidak menyediakan pembatalan pesanan.
+- Tidak menggunakan API Gateway atau Message Broker.
+- Tidak melakukan pengurangan stok produk.
+- Pembayaran hanya mengubah status pesanan.
+
+## 11. Konfigurasi Environment
+
+Konfigurasi layanan menggunakan environment variables, antara lain:
+
+- `DB_CONNECTION`
+- `DB_HOST`
+- `DB_PORT`
+- `DB_DATABASE`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `PRODUCT_SERVICE_URL`
+- `CART_SERVICE_URL`
+
+File `.env` tidak disertakan dalam repository. Gunakan `.env.example` sebagai referensi konfigurasi.
