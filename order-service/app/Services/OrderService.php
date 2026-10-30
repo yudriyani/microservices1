@@ -125,6 +125,32 @@ class OrderService
         return $query->latest()->get();
     }
 
+    
+    // Mengubah status pesanan menjadi PAID jika masih PENDING.
+    public function payOrder(int $orderId): ?Order
+    {
+        // Mencari pesanan berdasarkan ID.
+        $order = Order::with('items')->find($orderId);
+
+        // Mengembalikan null jika pesanan tidak ditemukan.
+        if ($order === null) {
+            return null;
+        }
+
+        // Menolak pembayaran jika status bukan PENDING.
+        if ($order->status !== 'PENDING') {
+            throw new CheckoutConflictException(
+                'Pesanan tidak dapat dibayar karena statusnya bukan PENDING.'
+            );
+        }
+
+        // Memperbarui status pesanan setelah validasi.
+        $order->status = 'PAID';
+        $order->save();
+
+        return $order;
+    }
+
 
 
 }

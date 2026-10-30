@@ -1,4 +1,3 @@
-
 <?php
 
 use App\Http\Controllers\OrderController;
@@ -25,4 +24,10 @@ Route::get('/orders/user/{userId}', [
 Route::get('/orders/{id}', [
     OrderController::class,
     'show',
+])->whereNumber('id');
+
+// Memproses pembayaran pesanan.
+Route::patch('/orders/{id}/pay', [
+    OrderController::class,
+    'pay',
 ])->whereNumber('id');

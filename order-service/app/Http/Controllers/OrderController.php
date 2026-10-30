@@ -140,4 +140,44 @@ class OrderController extends Controller
         ], 200);
     }
 
+    // Menangani pembayaran pesanan.
+public function pay(int $id): JsonResponse
+{
+    try {
+        $order = $this->orderService->payOrder($id);
+
+        // Mengembalikan 404 jika pesanan tidak ditemukan.
+        if ($order === null) {
+            return response()->json([
+                'message' => 'Pesanan tidak ditemukan.',
+            ], 404);
+        }
+
+        return response()->json([
+            'message' => 'Pesanan berhasil dibayar.',
+            'data' => $order,
+        ], 200);
+
+    } catch (CheckoutConflictException $e) {
+        // Menolak pembayaran jika status bukan PENDING.
+        return response()->json([
+            'message' => $e->getMessage(),
+        ], 409);
+    } catch (Throwable $e) {
+        Log::error('Gagal memproses pembayaran pesanan', [
+            'order_id' => $id,
+            'error' => $e->getMessage(),
+        ]);
+
+        $body = [
+            'message' => 'Terjadi kesalahan saat memproses pembayaran.',
+        ];
+
+        if (config('app.debug')) {
+            $body['error'] = $e->getMessage();
+        }
+
+        return response()->json($body, 500);
+    }
+}
 }
