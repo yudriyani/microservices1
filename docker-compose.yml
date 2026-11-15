@@ -96,7 +96,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: appuser
       MONGO_INITDB_ROOT_PASSWORD: apppassword
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
       - review-db-data:/data/db
     healthcheck:

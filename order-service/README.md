@@ -12,7 +12,7 @@ Layanan ini menggunakan Laravel dan MySQL. Order Service berkomunikasi dengan Ca
 - MySQL 8
 - Docker dan Docker Compose
 - REST API
-- Eloquent ORM
+- Eloquent ORMG
 
 ## 3. Arsitektur
 
