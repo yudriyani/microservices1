@@ -7,6 +7,7 @@ import { clearCart, removeCartItem, updateCartItem } from '../api/cartApi'
 import AsyncView from '../components/AsyncView'
 import { useAsync } from '../hooks/useAsync'
 import { describeError, formatRupiah } from '../utils/format'
+import { getProductImage, hideBrokenImage } from '../utils/productImage'
 
 export default function CartPage({ userId }) {
   const { loading, data, error, reload } = useAsync(() => getCartDetail(userId), [userId])
@@ -51,6 +52,13 @@ export default function CartPage({ userId }) {
                         <div className="cart-product">
                           <span className={`cart-thumb pastel-${item.product_id % 4}`}>
                             {item.product ? item.product.name.charAt(0) : '?'}
+                            {item.product && getProductImage(item.product) && (
+                              <img
+                                src={getProductImage(item.product)}
+                                alt={item.product.name}
+                                onError={hideBrokenImage}
+                              />
+                            )}
                           </span>
                           <span>
                             {item.product ? item.product.name : <em>Produk tidak tersedia</em>}
@@ -104,7 +112,11 @@ export default function CartPage({ userId }) {
               <p className="total">
                 Total: <strong className="price">{formatRupiah(data.totalPrice)}</strong>
               </p>
-              <button type="button" className="clear-button" onClick={() => run(() => clearCart(userId))}>
+              <button
+                type="button"
+                className="clear-button"
+                onClick={() => run(() => clearCart(userId))}
+              >
                 Kosongkan keranjang
               </button>
             </div>

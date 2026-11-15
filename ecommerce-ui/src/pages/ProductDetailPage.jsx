@@ -10,6 +10,7 @@ import ReviewForm from '../components/ReviewForm'
 import StarRating from '../components/StarRating'
 import { useAsync } from '../hooks/useAsync'
 import { describeError, formatRupiah } from '../utils/format'
+import { getProductImage, hideBrokenImage } from '../utils/productImage'
 
 export default function ProductDetailPage({ userId }) {
   const { id } = useParams() // nilai :id dari alamat /products/:id
@@ -39,6 +40,13 @@ export default function ProductDetailPage({ userId }) {
             <div className="detail">
               <div className={`detail-thumb pastel-${data.product.id % 4}`}>
                 {data.product.name.charAt(0)}
+                {getProductImage(data.product) && (
+                  <img
+                    src={getProductImage(data.product)}
+                    alt={data.product.name}
+                    onError={hideBrokenImage}
+                  />
+                )}
               </div>
 
               <div className="detail-info">
